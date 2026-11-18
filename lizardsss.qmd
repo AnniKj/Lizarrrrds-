@@ -1,0 +1,253 @@
+---
+title: "Lizards"
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+
+library(readr)
+lizard <- read_csv("lizard.csv", locale = locale(encoding = "Latin1"))
+View(lizard)
+
+library(dplyr)
+
+lizard <- data.frame(lizard)
+
+# Exclude what we do not want
+lizardclean <- lizard %>% select(-Average.Female.adult.weight..g.,-RCM,-SD.Female.adult.weight..g.,-Sample.Size.Female.adult.weight,-Sample.size.Mean.F.SVL.adults,-Clutches.per.year,-Sample.size.Clutch.Size.,-Offspring.SVL..mm.,-SD.F.SVL.adults..mm.)
+
+
+
+```
+
+Lets check for how many NAs there are to be able to know what data we can use
+
+
+
+```{r}
+na_summary <- data.frame(
+  column = names(lizard),
+  n_NA = colSums(is.na(lizard)),
+  proportion_NA = colMeans(is.na(lizard)),
+  percentage_NA = colMeans(is.na(lizard)) * 100
+)
+
+print(na_summary)
+
+library(ggplot2)
+
+na_summary <- data.frame(
+  column = names(lizard),
+  proportion_NA = colMeans(is.na(lizard))
+)
+
+ggplot(na_summary, aes(x = reorder(column, proportion_NA),
+                       y = proportion_NA)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Proportion of missing values per variable",
+    x = "Variable",
+    y = "Proportion of NAs"
+  ) +
+  theme_minimal()
+  
+```
+
+```{r}
+
+lizard_numeric <- lizard[, sapply(lizard, is.numeric)]
+
+cor_matrix <- cor(lizard_numeric,
+                  use = "pairwise.complete.obs",
+                  method = "pearson")
+
+round(cor_matrix, 2)
+
+library(corrplot)
+
+corrplot(cor_matrix,
+         method = "color",
+         type = "upper",
+         order = "hclust",
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 45,
+         tl.cex = 0.6,
+         number.cex = 0.5,
+         diag = FALSE)
+```
+
+I want to try out some linear models ( why? bcs i know them and like them))
+
+
+
+```{r}
+
+lm.svl.clutch <- lm(formula = `Mean Clutch Size` ~ `Mean F SVL adults (mm)`,data = lizard)
+
+#Plot data points
+plot(lizard$`Mean F SVL adults (mm)`,
+     lizard$`Mean Clutch Size`,
+     xlab = "Mean F SVL (mm)",
+     ylab = "Mean Clutch Size",
+     pch = 20)
+#lm line 
+abline(lm.svl.clutch,lwd=2,col="blue")
+
+summary(lm.svl.clutch)
+
+###trying another format  distribution
+library(ggplot2)
+ggplot(lizard, aes(x = `Mean F SVL adults (mm)`, y = `Mean Clutch Size`, color = Distribution)) +
+  geom_point() +  # Scatter plot points colored by Distribution
+  geom_smooth(method = "lm", se = FALSE) +  # Linear regression line
+  labs(title = "Mean Clutch Size vs Mean SVL Adults by Distribution",
+       x = "Mean F SVL adults (mm)",
+       y = "Mean Clutch Size") +
+  theme_minimal()
+
+
+###trying another format reproduction
+library(ggplot2)
+ggplot(lizard, aes(x = `Mean F SVL adults (mm)`, y = `Mean Clutch Size`, color =`Mode of reproduction` )) +
+  geom_point() +  # Scatter plot points colored by Distribution
+  geom_smooth(method = "lm", se = FALSE) +  # Linear regression line
+  labs(title = "Mean Clutch Size vs Mean SVL Adults by Mode of reproduction",
+       x = "Mean F SVL adults (mm)",
+       y = "Mean Clutch Size") +
+  theme_minimal()
+
+```
+```{r}
+lm.weight.lenght <- lm(formula = `Average Female adult weight (g)` ~ `Mean F SVL adults (mm)`,data = lizard)
+
+#Plot data points
+plot(lizard$`Mean F SVL adults (mm)`,
+     lizard$`Average Female adult weight (g)`,
+     xlab = "Mean F SVL (mm)",
+     ylab = "Weight (g)",
+     pch = 20)
+
+#lm line 
+abline(lm.weight.lenght,lwd=2,col="blue")
+
+summary(lm.svl.clutch)
+```
+
+
+next some anova obs 
+
+
+```{r}
+anova.clutch <- aov(`Mean Clutch Size` ~ Distribution, data = lizard)
+
+summary(anova.clutch)
+
+boxplot(`Mean Clutch Size` ~ Distribution, data = lizard)
+
+
+
+
+
+anova.SVL <- aov(`Mean F SVL adults (mm)` ~ Distribution, data = lizard)
+
+summary(anova.SVL)
+
+boxplot(`Mean F SVL adults (mm)` ~ Distribution, data = lizard)
+
+
+
+
+
+
+anova.clutch <- aov(`Mean Clutch Size` ~ `Mode of reproduction`, data = lizard)
+
+summary(anova.clutch)
+
+boxplot(`Mean Clutch Size` ~ `Mode of reproduction`, data = lizard)
+
+
+
+
+
+anova.SVL <- aov(`Mean F SVL adults (mm)` ~ `Mode of reproduction`, data = lizard)
+                 
+summary(anova.SVL)
+
+boxplot(`Mean F SVL adults (mm)` ~ `Mode of reproduction`, data = lizard)
+
+```
+ancovas , a bit of everything lol
+
+
+```{r}
+liz1<-na.omit(lizard)
+liz2<-na.omit(lizard$`SD F SVL adults (mm)`,lizard$`Mean Clutch Size`)
+
+
+
+
+lm_distrib <- lm(Distribution ~ `Mean F SVL adults (mm)` + `Mean Clutch Size` + `Mean F SVL adults (mm)`:`Mean Clutch Size`,data=liz2  )
+
+?lm
+```
+
+
+Trying smth new kmeeeeans
+
+```{r}
+library(tidyverse) 
+library(GGally) # For some plots
+
+data_traits <- read.table("lizard.csv", 
+                          sep=",",
+                             header = TRUE,
+                             encoding = "Latin1")
+
+###this is kind of a lot and maybe unnecessary - also run it in console 
+
+data_traits %>% 
+  select_if(is.numeric) %>% 
+  ggpairs()
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
